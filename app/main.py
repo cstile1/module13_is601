@@ -1,4 +1,8 @@
 # app/main.py
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
+
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
@@ -15,7 +19,7 @@ from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.database import Base, get_db, engine
 
-# Create tables on startup
+# FIRST create the app
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Creating tables...")
@@ -29,6 +33,13 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# NOW import and register routers
+from app.operations import auth_routes
+app.include_router(auth_routes.router)
+
 
 # ------------------------------------------------------------------------------
 # Health Endpoint
@@ -36,6 +47,24 @@ app = FastAPI(
 @app.get("/health", tags=["health"])
 def read_health():
     return {"status": "ok"}
+# ------------------------------------------------------------------------------
+# Front-End Page Routes
+# ------------------------------------------------------------------------------
+@app.get("/", tags=["pages"])
+def read_index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/dashboard", tags=["pages"])
+def dashboard_page(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/register", tags=["pages"])
+def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@app.get("/login", tags=["pages"])
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
 # ------------------------------------------------------------------------------
 # User Registration Endpoint
