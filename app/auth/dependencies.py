@@ -1,4 +1,3 @@
-# app/auth/dependencies.py
 from datetime import datetime
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
@@ -8,12 +7,8 @@ from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-from sqlalchemy.orm import Session
-from app.database import get_db
-
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme)
 ) -> UserResponse:
     """
     Dependency to get the current user from the JWT token without a database lookup.
