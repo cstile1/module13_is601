@@ -1,6 +1,7 @@
 #app/operations/auth_routes.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.database import get_db
 from app.models.user import User
@@ -20,7 +21,7 @@ router = APIRouter(
 
 @router.post("/register", response_model=UserResponse)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-    # Check duplicate email
+
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
@@ -28,13 +29,13 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
 
-    # Hash password
     hashed_pw = get_password_hash(payload.password)
 
-    # Create user
     user = User(
         email=payload.email,
-        username=payload.email,  # username = email
+        username=payload.username,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
         hashed_password=hashed_pw,
     )
 
@@ -45,12 +46,12 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(payload: dict, db: Session = Depends(get_db)):
-    email = payload.get("username")
+    username = payload.get("username")
     password = payload.get("password")
 
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,7 +64,6 @@ def login(payload: dict, db: Session = Depends(get_db)):
             detail="Invalid credentials"
         )
 
-    # Create JWT token
     access_token = create_token(
         user_id=str(user.id),
         token_type=TokenType.ACCESS
@@ -71,5 +71,8 @@ def login(payload: dict, db: Session = Depends(get_db)):
 
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "username": user.username
     }
+
+
